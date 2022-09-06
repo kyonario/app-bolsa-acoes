@@ -8,6 +8,38 @@ import 'dart:convert';
 
 String request = "https://api.hgbrasil.com/finance/stock_price?key=6c5f8a22";
 
+Future<Conteudo> getData(String symbol) async {
+  String upSymbol = symbol.toUpperCase();
+  print(upSymbol);
+  String uri = request+"&symbol="+upSymbol;
+  print(uri);
+  http.Response response = await http.get(Uri.parse(uri));
+
+  if (response.statusCode == 200) {
+    var json = jsonDecode(response.body);
+    var conteudo = Conteudo(
+      nome: json['results'][upSymbol]["name"],
+      valor: json['results'][upSymbol]["price"],
+      //code: json['results'][symbol]["symbol"]
+    );
+    return conteudo;
+  } else {
+    throw Exception('Falha ao carregar um post');
+  }
+}
+
+class Conteudo {
+  final String nome;
+  final double valor;
+
+//final String code;
+
+  const Conteudo({
+    required this.nome,
+    required this.valor,
+    //required this.code,
+  });
+}
 void main() async {
   runApp(MaterialApp(
     home: Home(),
@@ -16,84 +48,24 @@ void main() async {
 
 }
 
-/*
-* Faz uma requisicao do tipo get a api com adição do codigo
-* */
-
-Future<Conteudo> getData(String symbol) async {
-  String uri = request+"&symbol="+symbol;
-  http.Response response = await http.get(Uri.parse(uri));
-
-  if (response.statusCode == 200) {
-    var json = jsonDecode(response.body);
-    var conteudo = Conteudo(
-      nome: json['results'][symbol]["name"],
-      valor: json['results'][symbol]["price"],
-      //code: json['results'][symbol]["symbol"]
-    );
-    return conteudo;
-  } else {
-    throw Exception('Falha ao carregar um post');
-  }
-}
-class Conteudo {
-  final String nome;
-  final double valor;
-//final String code;
-
-  const Conteudo({
-    required this.nome,
-    required this.valor,
-    //required this.code,
-  });
-
-  /*
-  factory Conteudo.fromJson(Map<String, dynamic> json) {
-    return Conteudo(
-      nome: json['results']["EEEL3"]["name"],
-      valor: json['results']["EEEL3"]["price"],
-      //code: json['results']["EEEL3"]["symbol"],
-      //id: json['id'],
-      //title: json['title'],
-    );
-  } */
-}
 class Home extends StatefulWidget {
   @override
   _HomeState createState() => _HomeState();
 }
 
-/*String _montagemURI(String symbol) {
-
-  String piece = "&symbol="+symbol;
-  return piece;
-}
- */
-
 class _HomeState extends State<Home>{
+
+
+  @override
+   void initState(){
+     super.initState();
+   }
+
 
   TextEditingController consultaController = TextEditingController();
   GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  String _textInfoNome = "";
-  String _textInfoValor = "";
+  Future<Conteudo>? _futureCont;
 
-  /*
-  * Limpar campos nos TextEditingController
-  * */
-  void _resetCampos() {
-    _formKey.currentState!.reset();
-    consultaController.clear();
-    setState(() {
-      _textInfoNome = "";
-      _textInfoValor = "";
-    });
-  }
-  /*
-  Future<Conteudo> _consultar() async{
-    setState(() {
-      return getData(consultaController.text);
-    });
-  }  */
 
   @override
   Widget build(BuildContext context){
@@ -131,9 +103,11 @@ class _HomeState extends State<Home>{
                         height: 50.0,
                         highlightColor: Colors.blue,
                         child: ElevatedButton(
-                          onPressed: () async{
-                            if(_formKey.currentState!.validate()){
-                              getData(consultaController.text);
+                          onPressed: () {
+                            if(_formKey.currentState!.validate()) {
+                              setState(() {
+                                 _futureCont = getData(consultaController.text);
+                              });
                             }
                           },
                           child: Text(
@@ -144,7 +118,7 @@ class _HomeState extends State<Home>{
                   ),
                     Center(
                       child: FutureBuilder<Conteudo>(
-                      future: getData(consultaController.text),
+                      future: _futureCont,
                       builder: (context,snapshot){
                         if(snapshot.hasData){
                           return Padding(
@@ -171,6 +145,7 @@ class _HomeState extends State<Home>{
             BottomNavigationBarItem(
               icon: Icon(Icons.refresh),
               label: "Limpar",
+
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),
